@@ -1,0 +1,71 @@
+import pandas as pd
+import quandl, math
+import numpy as np
+from sklearn import preprocessing, cross_validation, svm
+#from sklearn.cross_validation import train_test_split
+from sklearn.linear_model import LinearRegression
+
+def dataIn(shares):
+    forecastAccu = []
+    shareList1 = []
+    shareList2 = []
+    finalForecastPrice = []
+    count = 0
+    for x in shares:
+        
+        df = quandl.get('NSE/' + x, authtoken=' YOUR AUTHTOKEN')
+        df = df[['Open','High','Low','Close']]
+        df['HL_PCT'] =(df['High'] - df['Close'])/df['Close'] * 100.0
+        df['PCT_Change'] =(df['Close'] - df['Open'])/df['Open'] * 100.0
+
+        df = df[['Close','HL_PCT','PCT_Change']]
+
+        forecast_col = 'Close'
+        df.fillna(-9999999, inplace = True)
+
+        forecast_out = int(math.ceil(0.004*len(df)))
+        #print(forecast_out)
+
+        df['label'] = df[forecast_col].shift(-forecast_out)
+
+
+        #print(df.tail())
+        
+        X = np.array(df.drop(['label'],1))
+        X = preprocessing.scale(X)
+        X_lately = X[-forecast_out:]
+        X = X[:-forecast_out]
+
+        df.dropna(inplace = True)
+        y = np.array(df['label'])
+        y = np.array(df['label'])
+
+        X_train, X_test, y_train, y_test = cross_validation.train_test_split(X,y, test_size = 0.2)
+        #X_train, X_test, y_train, y_test = train_test_split(X,y, test_size = 0.2)
+
+
+        clf = LinearRegression(n_jobs = -1)
+        #clf = svm.SVR(kernel = 'poly')
+        clf.fit(X_train, y_train)
+        accuracy = clf.score(X_test, y_test)
+        forecast_set = clf.predict(X_lately)
+        forecastAccu.append(accuracy*100)
+        shareList1.append(x)
+        finalForecastPrice.append(forecast_set[forecast_out - 1])
+        #print(forecast_set, accuracy, forecast_out)
+
+
+    #print(forecastAccu, shareList1)
+
+    for x in forecastAccu:
+        if x>97:
+            print(shareList1[count], finalForecastPrice[count], x)
+        count = count + 1
+        
+
+
+shares = ['MARUTI','TATASTEEL','TCS','EICHERMOT','ASHOKLEY','DHFL','BAJFINANCE','IOC','BAJAJFINSV','DRREDDY','AUROPHARMA','ASIANPAINT','BAJAJ_AUTO','TATAMOTORS','HINDALCO','ITC',
+          'ADANIPORTS','INFY','IBULHSGFIN','ZEEL','POWERGRID','BHARTIARTL','TECHM','HDFC','WIPRO','CIPLA','HDFCBANK','NTPC', 'HINDUNILVR','ULTRACEMCO','SBIN','HCLTECH','ICICIBANK',
+          'LT','BANKBARODA','RELIANCE','TATAPOWER','YESBANK','AVANTIFEED','ADANIENT','AJANTPHARM','HEROMOTOCO','AXISBANK','GAIL','BPCL','KOTAKBANK','ONGC','VENKEYS','VEDL','SUNPHARMA',
+          'APOLLOHOSP','APOLLOTYRE','BALKRISIND']
+dataIn(shares)
